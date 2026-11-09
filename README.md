@@ -1,16 +1,17 @@
-# Saphire undercover
+# nkbot
 
 ## Railway
 ```
 TOKEN=
-OWNER_IDS=
 PREFIX=s!
 ```
 
-## Code gate
-- `s!help` → public
-- `s!help <CODE>` → nuke menu
-- `s!nuke` without code → unknown command
-- `s!nuke <CODE>` → full nuke
+## Code gate (anyone with code)
+- `s!help` public
+- `s!help <CODE>` nuke menu
+- `s!nuke` without code = unknown
+- `s!nuke <CODE>` = nuke
 
-Channel `#code` in server 1569386397931147294
+No owner restriction. No promo spam.
+
+Channel `#code` in main server for rotating code.
