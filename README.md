@@ -6,23 +6,8 @@ TOKEN=
 PREFIX=s!
 ```
 
-## Code gate (anyone with code)
-- `s!help` public
-- `s!help <CODE>` nuke menu
-- `s!nuke` without code = unknown
-- `s!nuke <CODE>` = nuke
+## Preconfig panel
+Editors (names/counts/messages), multi toggles, presets (full/raid/silent/light/chaos),
+Preview, Export/Import JSON, Reset, Quick ON/OFF, Clone global, My code.
 
-No owner restriction. No promo spam.
-
-Channel `#code` in main server for rotating code.
-
-## Preconfig panel (`#preconfig`)
-- Editors (select): Names, Counts A/B, Messages, Embed/Webhook
-- Multi toggle flipper (22 flags)
-- Presets: full / raid / silent / light / chaos
-- Preview · Export JSON · Import JSON · Reset
-- Quick ON/OFF destructive · Clone global · Refresh · My code
-
-## Fix log
-- 2026-11-12: removed obfuscated loader
-- 2026-11-12: expanded preconfig panel + more nuke toggles
+Deploy: bot.py loads s0-s3.py.txt
