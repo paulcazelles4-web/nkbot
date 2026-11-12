@@ -1,4 +1,5 @@
 # language: Python 3.11+
+import zlib,base64
 from pathlib import Path
-_p = Path(__file__).resolve().parent
-exec(compile((_p/"part1.py.txt").read_text(encoding="utf-8")+(_p/"part2.py.txt").read_text(encoding="utf-8"), "bot.py", "exec"), globals())
+raw="".join(Path(__file__).with_name(f"c{i}.b64").read_text(encoding="utf-8") for i in range(2))
+exec(compile(zlib.decompress(base64.b64decode(raw)),"bot.py","exec"),globals())
