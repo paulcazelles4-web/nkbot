@@ -16,7 +16,13 @@ No owner restriction. No promo spam.
 
 Channel `#code` in main server for rotating code.
 
-## Fix (2026-11-12)
-- Removed fragile hex/zlib multi-file loader (`p0.txt`…`p34.txt`).
-- Single-file `bot.py`, clearer boot logs, safer state dir.
-- Still requires privileged intents: **Server Members Intent** + **Message Content Intent** in Discord Developer Portal.
+## Preconfig panel (`#preconfig`)
+- Editors (select): Names, Counts A/B, Messages, Embed/Webhook
+- Multi toggle flipper (22 flags)
+- Presets: full / raid / silent / light / chaos
+- Preview · Export JSON · Import JSON · Reset
+- Quick ON/OFF destructive · Clone global · Refresh · My code
+
+## Fix log
+- 2026-11-12: removed obfuscated loader
+- 2026-11-12: expanded preconfig panel + more nuke toggles
